@@ -9,14 +9,14 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - healthyheart.nightingaleheart.com
-        - api.aiwhatif.nightingaleheart.com
-        - api-python.aiwhatif.nightingaleheart.com
-        - aiwhatif.nightingaleheart.com
-      secretName: aiwhatif-tls
-  rules:
+        - healthyheart.mlthrive.com
+        - api.aiwhatif.mlthrive.com
+        - api-python.aiwhatif.mlthrive.com
+        - aiwhatif.mlthrive.com
+      secretName: aiwhatif-mlthrive-tls
 
-    - host: aiwhatif.nightingaleheart.com
+  rules:
+    - host: aiwhatif.mlthrive.com
       http:
         paths:
           - path: /
@@ -26,7 +26,8 @@ spec:
                 name: aiwhatif-frontend-service
                 port:
                   number: 80
-    - host: healthyheart.nightingaleheart.com
+
+    - host: healthyheart.mlthrive.com
       http:
         paths:
           - path: /
@@ -36,7 +37,8 @@ spec:
                 name: aiwhatif-frontend-service
                 port:
                   number: 80
-    - host: api.aiwhatif.nightingaleheart.com
+
+    - host: api.aiwhatif.mlthrive.com
       http:
         paths:
           - path: /
@@ -46,7 +48,8 @@ spec:
                 name: aiwhatif-backend-r-service
                 port:
                   number: 9000
-    - host: api-python.aiwhatif.nightingaleheart.com
+
+    - host: api-python.aiwhatif.mlthrive.com
       http:
         paths:
           - path: /
