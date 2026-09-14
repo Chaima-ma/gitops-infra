@@ -7,11 +7,18 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
+
   tls:
     - hosts:
         - ecgprediction.nightingaleheart.com
         - api.ecgprediction.nightingaleheart.com
       secretName: ecgprediction-tls
+
+    - hosts:
+        - ecgprediction.mlthrive.com
+        - api.ecgprediction.mlthrive.com
+      secretName: ecgprediction-mlthrive-tls
+
   rules:
     - host: ecgprediction.nightingaleheart.com
       http:
@@ -23,7 +30,30 @@ spec:
                 name: ecgprediction-frontend-service
                 port:
                   number: 80
+
     - host: api.ecgprediction.nightingaleheart.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ecgprediction-backend-service
+                port:
+                  number: 8000
+
+    - host: ecgprediction.mlthrive.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ecgprediction-frontend-service
+                port:
+                  number: 80
+
+    - host: api.ecgprediction.mlthrive.com
       http:
         paths:
           - path: /
