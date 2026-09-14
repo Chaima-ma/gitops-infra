@@ -10,13 +10,24 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
+
   tls:
     - hosts:
         - adaptatutor.nightingaleheart.com
       secretName: adaptatutor-tls
+
     - hosts:
         - api-adaptatutor.nightingaleheart.com
       secretName: api-adaptatutor-tls
+
+    - hosts:
+        - adaptatutor.mlthrive.com
+      secretName: adaptatutor-mlthrive-tls
+
+    - hosts:
+        - api-adaptatutor.mlthrive.com
+      secretName: api-adaptatutor-mlthrive-tls
+
   rules:
     - host: adaptatutor.nightingaleheart.com
       http:
@@ -28,7 +39,30 @@ spec:
                 name: healthmap-adaptatutor-frontend
                 port:
                   number: 80
+
     - host: api-adaptatutor.nightingaleheart.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: healthmap-adaptatutor-backend
+                port:
+                  number: 8000
+
+    - host: adaptatutor.mlthrive.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: healthmap-adaptatutor-frontend
+                port:
+                  number: 80
+
+    - host: api-adaptatutor.mlthrive.com
       http:
         paths:
           - path: /
