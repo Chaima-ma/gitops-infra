@@ -17,38 +17,11 @@ spec:
 
   tls:
     - hosts:
-        - surgicsense.nightingaleheart.com
-        - api.surgicsense.nightingaleheart.com
-      secretName: surgicsense-tls
-
-    - hosts:
         - surgicsense.mlthrive.com
         - api.surgicsense.mlthrive.com
       secretName: surgicsense-mlthrive-tls
 
   rules:
-    - host: surgicsense.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: healthview-surgicsense-frontend
-                port:
-                  number: 8080
-
-    - host: api.surgicsense.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: healthview-surgicsense-backend
-                port:
-                  number: 8000
-
     - host: surgicsense.mlthrive.com
       http:
         paths:

@@ -13,14 +13,6 @@ spec:
 
   tls:
     - hosts:
-        - harmoniahealth.nightingaleheart.com
-      secretName: harmoniahealth-tls
-
-    - hosts:
-        - api-harmoniahealth.nightingaleheart.com
-      secretName: api-harmoniahealth-tls
-
-    - hosts:
         - harmoniahealth.mlthrive.com
       secretName: harmoniahealth-mlthrive-tls
 
@@ -29,28 +21,6 @@ spec:
       secretName: api-harmoniahealth-mlthrive-tls
 
   rules:
-    - host: harmoniahealth.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: harmoniahealth-frontend-service
-                port:
-                  number: 80
-
-    - host: api-harmoniahealth.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: harmoniahealth-node-service
-                port:
-                  number: 6987
-
     - host: harmoniahealth.mlthrive.com
       http:
         paths:

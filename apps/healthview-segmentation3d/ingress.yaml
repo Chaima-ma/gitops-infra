@@ -20,38 +20,11 @@ spec:
 
   tls:
     - hosts:
-        - segmentation.nightingaleheart.com
-        - segmentation-api.nightingaleheart.com
-      secretName: healthview-segmentation3d-tls
-
-    - hosts:
         - segmentation.mlthrive.com
         - segmentation-api.mlthrive.com
       secretName: healthview-segmentation3d-mlthrive-tls
 
   rules:
-    - host: segmentation.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: healthview-segmentation3d-frontend
-                port:
-                  number: 80
-
-    - host: segmentation-api.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: healthview-segmentation3d-backend
-                port:
-                  number: 8000
-
     - host: segmentation.mlthrive.com
       http:
         paths:
