@@ -16,6 +16,9 @@ spec:
     - hosts:
         - lifesaver.nightingaleheart.com
       secretName: lifesaver-tls
+    - hosts:
+        - lifesaver.mlthrive.com
+      secretName: lifesaver-mlthrive-tls
   rules:
     - host: lifesaver.nightingaleheart.com
       http:
@@ -39,6 +42,33 @@ spec:
                   number: 5005
 
           # Frontend must stay last because it catches all remaining paths.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nightingale-lifesaver-frontend
+                port:
+                  number: 80
+
+    - host: lifesaver.mlthrive.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: nightingale-lifesaver-backend
+                port:
+                  number: 3000
+
+          - path: /webhooks
+            pathType: Prefix
+            backend:
+              service:
+                name: nightingale-lifesaver-backend
+                port:
+                  number: 5005
+
           - path: /
             pathType: Prefix
             backend:
