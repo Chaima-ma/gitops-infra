@@ -18,7 +18,7 @@ This directory contains the complete technical documentation, architectural audi
 | [gitops-infra-analysis.md](file:///D:/Projects/Upcloud/gitops-infra-analysis.md) | **`gitops-infra` Repository Deep Dive & CI/CD Pipeline Analysis** | 🟢 Reference |
 | [infrastructure-audit.md](file:///D:/Projects/Upcloud/infrastructure-audit.md) | **Cluster Network Infrastructure Audit** (Dual Load Balancers & TLS) | 🟢 Reference |
 | [pending-actions-and-auth0.md](file:///D:/Projects/Upcloud/pending-actions-and-auth0.md) | **Auth0 Configuration Runbook & Blocked Secrets Registry** | ⏸️ Pending |
-| [upcloud-support-ticket-cilium.md](file:///D:/Projects/Upcloud/upcloud-support-ticket-cilium.md) | **UpCloud Support Ticket** (Cilium Operator Crash & IPAM Failure) | 🔴 Ready to Send |
+| [upcloud-support-ticket-cilium.md](file:///D:/Projects/Upcloud/upcloud-support-ticket-cilium.md) | **UpCloud Support Ticket Draft / Incident Record** (Cilium Operator Crash & IPAM) | 🟢 Resolved (Do Not Send) |
 | [mlthrive-domain-tls-postmortem.md](file:///D:/Projects/Upcloud/mlthrive-domain-tls-postmortem.md) | **Postmortem: `mlthrive.com` DNS & TLS on UpCloud Object Storage** | 🟢 Closed |
 
 ---
@@ -116,12 +116,12 @@ This directory contains the complete technical documentation, architectural audi
   * Post-Auth0 Kubernetes secret patching commands and verification procedures.
   * List of non-Auth0 services that can proceed independently.
 
-#### 🚨 [upcloud-support-ticket-cilium.md](file:///D:/Projects/Upcloud/upcloud-support-ticket-cilium.md)
-* **Description:** Formal, high-severity support ticket ready for submission to UpCloud Managed Kubernetes Support.
+#### 🟢 [upcloud-support-ticket-cilium.md](file:///D:/Projects/Upcloud/upcloud-support-ticket-cilium.md)
+* **Description:** Incident record and resolved support draft retained for historical documentation (**DO NOT SEND TO SUPPORT**).
 * **Key Contents:**
-  * Detailed incident description: worker node `medium-fbfpz-5brrp` unable to start workloads due to missing IPv4 PodCIDR allocation.
-  * Root cause evidence: `cilium-operator` CrashLoopBackOff caused by Gateway API `TLSRoute` CRD version incompatibility (`v1alpha2` expected by Cilium 1.18.6, but only `v1` served).
-  * Concrete remediation requests for UpCloud platform engineers.
+  * Historical incident description: worker node `medium-fbfpz-5brrp` unable to start workloads due to missing IPv4 PodCIDR allocation.
+  * Root cause evidence: `cilium-operator` CrashLoopBackOff caused by Gateway API `TLSRoute` CRD version incompatibility (`v1alpha2` expected by Cilium 1.18.6, but set to `served: false`).
+  * Resolution: resolved internally via `v1alpha2 served=true` CRD compatibility patch; all workloads and nodes healthy.
 
 #### 🔍 [mlthrive-domain-tls-postmortem.md](file:///D:/Projects/Upcloud/mlthrive-domain-tls-postmortem.md)
 * **Description:** Postmortem analysis of the initial `mlthrive.com` DNS and TLS provisioning on UpCloud Managed Object Storage.

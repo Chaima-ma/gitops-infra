@@ -1,10 +1,43 @@
 # UpCloud Support Ticket: Cilium operators in CrashLoopBackOff preventing IPAM allocation on worker node
 
+> **STATUS: RESOLVED — DO NOT SEND TO UPCLOUD SUPPORT**
+>
+> This issue was resolved internally on September 14, 2026.
+>
+> Root cause: Cilium 1.18.6 expected `gateway.networking.k8s.io/v1alpha2` for `TLSRoute`, while the installed Gateway API v1.6.1 CRD had `v1alpha2` present but `served: false`. Both `cilium-operator` replicas therefore crashed during Gateway API initialization, which stopped cluster-pool IPAM from allocating a PodCIDR to the newer worker node.
+>
+> Resolution: after reviewing Cilium and Gateway API documentation and testing the change safely, the existing `TLSRoute` CRD was patched so that `v1alpha2` is served:
+>
+> ```text
+> v1alpha2 served=true
+> ```
+>
+> No CRD downgrade or full Gateway API replacement was performed.
+>
+> After the change:
+>
+> - `cilium-operator` recovered to `2/2 Ready`
+> - Cilium DaemonSet recovered to `6/6 Ready`
+> - `medium-fbfpz-5brrp` received PodCIDR `192.168.4.0/24`
+> - the Cilium agent on the node became healthy
+> - affected workloads recovered
+> - the node was uncordoned and is `Ready`
+>
+> **UpCloud Support is no longer required for this incident.**
+>
+> Important: this is a compatibility workaround. A future Gateway API CRD update may overwrite the `served=true` setting, so Cilium/Gateway API compatibility should be verified before future upgrades.
+
 **Cluster:** Managed Kubernetes (UK8s)  
 **Region / Zone:** `de-fra1`  
 **Affected Worker Node:** `medium-fbfpz-5brrp` (`10.0.0.23` / `94.237.91.44`)  
 **Node Creation Date:** September 07, 2026  
-**Severity:** High (Workloads scheduled to new worker node cannot start; pods stuck in ContainerCreating / Pending)  
+**Severity:** High → Resolved (Closed internally)  
+
+---
+
+## Original support request — retained for incident history
+
+The content below documents the original symptoms, impact and investigation before the issue was resolved.
 
 ---
 
@@ -63,7 +96,7 @@ no matches for kind "TLSRoute" in version "gateway.networking.k8s.io/v1alpha2"
 
 Inspection of the cluster CRDs reveals that `tlsroutes.gateway.networking.k8s.io` currently serves only `v1`, while `v1alpha2` and `v1alpha3` are set to `served: false`. The Cilium operator 1.18.6 controller fails during startup because it attempts to watch `v1alpha2`. Because the operator crashes, cluster-pool IPAM allocation does not run and never assigns a PodCIDR to newly joined nodes.
 
-We have intentionally not modified Cilium CRDs, CiliumNode IPAM state, or system components manually to avoid interfering with cluster management.
+At the time of the original investigation, no Cilium CRDs or system components had yet been modified manually. The compatibility change described in the resolution section above was applied later after validation.
 
 ---
 
