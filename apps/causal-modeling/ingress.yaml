@@ -10,38 +10,11 @@ spec:
 
   tls:
     - hosts:
-        - causal-modeling.nightingaleheart.com
-        - api-causal-modeling.nightingaleheart.com
-      secretName: causal-modeling-tls
-
-    - hosts:
         - causal-modeling.mlthrive.com
         - api-causal-modeling.mlthrive.com
       secretName: causal-modeling-mlthrive-tls
 
   rules:
-    - host: causal-modeling.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: causal-modeling-service-frontend
-                port:
-                  number: 3000
-
-    - host: api-causal-modeling.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: causal-modeling-service-backend
-                port:
-                  number: 8000
-
     - host: causal-modeling.mlthrive.com
       http:
         paths:

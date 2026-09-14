@@ -13,38 +13,11 @@ spec:
 
   tls:
     - hosts:
-        - echoexplore.nightingaleheart.com
-        - api-echoexplore.nightingaleheart.com
-      secretName: echoexplore-tls
-
-    - hosts:
         - echoexplore.mlthrive.com
         - api-echoexplore.mlthrive.com
       secretName: echoexplore-mlthrive-tls
 
   rules:
-    - host: echoexplore.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: echoexplore-frontend-service
-                port:
-                  number: 80
-
-    - host: api-echoexplore.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: echoexplore-backend-service
-                port:
-                  number: 5000
-
     - host: echoexplore.mlthrive.com
       http:
         paths:
