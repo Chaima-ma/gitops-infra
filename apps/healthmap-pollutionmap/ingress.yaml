@@ -53,7 +53,7 @@ spec:
                 port:
                   number: 80
 
-    - host: api.pollutionmap.nightingaleheart.com
+    - host: api.pollutionmap.mlthrive.com
       http:
         paths:
           - path: /
