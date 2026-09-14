@@ -14,11 +14,17 @@ The vast majority of standard Kubernetes / NGINX Ingress services have now been 
 - New `mlthrive.com` Let's Encrypt certificates have been issued, validated (`READY: True`), and are actively serving traffic.
 - The final live cluster audit confirms that **the legacy domain has been eliminated from all production NGINX Ingress routing**.
 
-The only routing infrastructure components still referencing `nightingaleheart.com` are:
-- **`ai-whatif`** (HTTPRoutes: `aiwhatif.nightingaleheart.com`, `api.aiwhatif.nightingaleheart.com`, `api-python.aiwhatif.nightingaleheart.com`)
-- **`gateway/api-gateway`** (Cilium Gateway API wildcard listener `*.nightingaleheart.com`)
+The remaining routing infrastructure components referencing `nightingaleheart.com` were initially:
+- **`ai-whatif`** (3 legacy HTTPRoutes)
+- **`gateway/api-gateway`** (Cilium Gateway API wildcard listener `*.nightingaleheart.com` on LB №2)
 
-This is an expected, deliberate state: migration of `ai-whatif` and the Cilium Gateway was intentionally deferred to avoid compounding issues while the underlying Cilium operator / Gateway API issue is being addressed by platform support.
+### Subsequent Resolution: AI-WhatIf Migration Completed
+
+> AI-WhatIf migration has been completed. Legacy AI-WhatIf Cilium HTTPRoutes have been removed after validation of the NGINX migration.
+
+- AI-WhatIf was fully cut over to `aiwhatif-ingress` with Let's Encrypt TLS secret `aiwhatif-mlthrive-tls` on NGINX LB `212.147.228.214`.
+- The 3 legacy HTTPRoutes (`frontend-httpRoute.yaml`, `backendPy-httpRoute.yaml`, `backendR-httpRoute.yaml`) were deleted from GitOps and pruned from the cluster by ArgoCD.
+- **Scope Clarification on Remaining Objects:** Legacy `cert-manager` Challenge and Certificate resources in `ai-whatif` were not deleted during this pass and remain scheduled for future verification and cleanup. Similarly, the `gateway` namespace and `api-gateway` resource are not declared cleaned up, as the Gateway infrastructure may still be in use.
 
 ---
 

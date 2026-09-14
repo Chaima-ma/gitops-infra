@@ -57,8 +57,14 @@ https://lifesaver.mlthrive.com/api
 Webhooks:
 https://lifesaver.mlthrive.com/webhooks
 
-AI-WHATIF — TARGET URLs, NOT MIGRATED YET
+AI-WHATIF
 Frontend:   https://aiwhatif.mlthrive.com
+Alias:      https://healthyheart.mlthrive.com
 R API:      https://api.aiwhatif.mlthrive.com
 Python API: https://api-python.aiwhatif.mlthrive.com
-Alias:      https://healthyheart.mlthrive.com
+
+Status: Migrated / Verified
+Routing: NGINX Ingress
+TLS: aiwhatif-mlthrive-tls
+ArgoCD: Synced / Healthy
+Legacy Cilium HTTPRoutes: Removed

@@ -14,8 +14,8 @@ The audit confirmed that the cluster is almost entirely managed via GitOps using
 | Category | Value | Description |
 | :--- | :--- | :--- |
 | **Total ArgoCD Applications** | 27 applications | Infrastructure charts + business services |
-| **Healthy & Synced** | 19 applications | Completely up-to-date and healthy |
-| **OutOfSync / Degraded** | 4 applications | `ai-whatif` (Degraded), `prometheus`, `gatewayapi-crds`, `root` |
+| **Healthy & Synced** | 20 applications | Completely up-to-date and healthy (including `ai-whatif`) |
+| **OutOfSync / Degraded** | 3 applications | `prometheus`, `gatewayapi-crds`, `root` (historical `ai-whatif` resolved) |
 | **Progressing** | 4 applications | `healthmap-adaptatutor`, `healthview-segmentation3d`, `alloy`, `loki` |
 | **Ingress under GitOps** | 15 of 18 | 15 managed by ArgoCD, 1 manual (`cloud-ingress`), 2 dynamic solvers |
 
@@ -45,7 +45,7 @@ flowchart TD
 
 | Application (Name) | Namespace | Git Path | Revision | Target NS | Sync Status | Health Status | Auto-Sync (Prune/SelfHeal) |
 | :--- | :--- | :--- | :---: | :--- | :---: | :---: | :---: |
-| **ai-whatif** | `argocd` | `apps/ai-whatif` | HEAD | `ai-whatif` | ⚠️ **OutOfSync** | 🔴 **Degraded** | prune: true, selfHeal: true |
+| **ai-whatif** | `argocd` | `apps/ai-whatif` | HEAD | `ai-whatif` | Synced | 🟢 **Healthy** | prune: true, selfHeal: true |
 | **alloy** | `argocd` | *(chart/custom)* | — | `monitoring` | Synced | 🟡 Progressing | prune: true, selfHeal: true |
 | **causal-modeling** | `argocd` | `apps/causal-modeling` | HEAD | `causal-modeling` | Synced | 🟢 Healthy | prune: true, selfHeal: true |
 | **cert-manager** | `argocd` | `charts.jetstack.io` (v1.20.2) | Helm | `cert-manager` | Synced | 🟢 Healthy | prune: true, selfHeal: true |
@@ -104,14 +104,15 @@ The table below demonstrates which Ingress resources are actively managed by Arg
 
 ## 4. Problematic Applications and Anomalies
 
-### 1. `ai-whatif` (OutOfSync & Degraded)
-* **Root Cause of Degradation:** One or more conditions in the `ai-whatif` application are unsatisfied (e.g. crashing pods, resource constraints, or service discovery failures).
-* **Ingress:** The Ingress `aiwhatif-ingress` itself is synchronized and functional (hosts: `aiwhatif`, `healthyheart`, `api`, `api-python`).
-* **Diagnostic Commands:**
-  ```bash
-  kubectl -n ai-whatif get pods,deployment,svc
-  kubectl -n argocd get application ai-whatif -o yaml
+### 1. `ai-whatif` (Historical: OutOfSync & Degraded → Resolved: Synced & Healthy)
+* **Historical Finding:** `ai-whatif` was previously reported in `OutOfSync` and `Degraded` status. The audit identified an indentation error in `apps/ai-whatif/backendR-httpRoute.yaml` (`path: null`), which caused the Cilium Gateway controller to reject the route.
+* **Final Resolution:** **Resolved: routes removed because NGINX became authoritative routing path**. Rather than fixing indentation in unused legacy routes, the entire legacy Cilium HTTPRoute layer was deleted from GitOps (`backendPy-httpRoute.yaml`, `backendR-httpRoute.yaml`, `frontend-httpRoute.yaml`) and pruned from the cluster by ArgoCD.
+* **Current Final State:**
+  ```text
+  ArgoCD: Synced / Healthy
+  HTTPRoute resources in ai-whatif: none
   ```
+  All four endpoints (`aiwhatif.mlthrive.com`, `healthyheart.mlthrive.com`, `api.aiwhatif.mlthrive.com`, `api-python.aiwhatif.mlthrive.com`) route cleanly through `aiwhatif-ingress` via NGINX LB `212.147.228.214` with Let's Encrypt TLS certificate `aiwhatif-mlthrive-tls`.
 
 ### 2. `healthmap-adaptatutor` (Synced, but Progressing)
 * **Root Cause:** The application was in `Progressing` status primarily because cert-manager was unable to complete TLS certificate issuance (`adaptatutor-tls` and `api-adaptatutor-tls` stuck in `False` for 75 days).

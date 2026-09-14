@@ -60,7 +60,7 @@ Total buckets identified: **29**
 | `healthview-echogame-videos-prod` | EchoGame | **UpCloud equivalent not found:** Video dataset migration required. |
 | `healthview-segmentation3d-assets-prod` | Segmentation3D | **UpCloud equivalent not found:** Verify assets and migrate. |
 | `healthview-segmentation3d-models-prod` | Segmentation3D models | 🚨 **Still referenced by application!** Direct dependency in frontend config. Migration required before deletion. |
-| `nightingale-aiwhatif-data-prod` | AI-WhatIf | **To verify:** Compare contents and timestamps with UpCloud `aiwhatif` bucket. |
+| `nightingale-aiwhatif-data-prod` | AI-WhatIf | **Runtime dependency: UpCloud confirmed**<br/>**Data migration completeness: Pending AWS ↔ UpCloud comparison**<br/>*(Live backend Secret points to UpCloud `6ftru.upcloudobjects.com`, but object/timestamp audit required before marking MIGRATED / VERIFIED)* |
 | `nightingale-bogalusa-data-prod` | Bogalusa | **To verify:** Confirm status and target destination. |
 | `nightingale-heartcluster-assets-prod` | HeartClusters | **To verify:** Determine if used by running frontend/backend. |
 | `nightingale-lifesaver-models-prod` | LifeSaver | **To verify:** Check model loading requirements in backend. |
@@ -134,6 +134,11 @@ Several workloads running in the UpCloud Kubernetes cluster still actively depen
 3. **EchoGame CloudFront & S3 Origin:**
    * EchoGame frontend references legacy CloudFront distribution `dc3pdcj61u7t1.cloudfront.net` (origin `echogame-videos-mp4.s3.eu-central-1.amazonaws.com`) via `NEXT_PUBLIC_S3_BASE_URL` and `CDN_BASE_URL`.
    * Video dataset must be copied to UpCloud Object Storage and given a public or CDN endpoint before decommissioning (see [Ticket #8](file:///D:/Projects/Upcloud/migration-tickets.md#ticket-8-migrate-echogame-media-storage-and-cdn-from-aws-to-upcloud)).
+
+4. **AI-WhatIf Storage (Runtime on UpCloud Confirmed; Data Audit Pending):**
+   * Live backend Secret inspection confirms that `S3_ENDPOINT_URL` points to UpCloud Object Storage (`https://6ftru.upcloudobjects.com`), targeting bucket `app-bucket/aiwhatif`.
+   * **Runtime Dependency:** UpCloud confirmed (the running pod does not call AWS).
+   * **Data Migration Completeness:** Pending AWS ↔ UpCloud comparison. The AWS bucket `nightingale-aiwhatif-data-prod` will remain intact until an object-by-object and timestamp audit proves full data parity.
 
 ---
 

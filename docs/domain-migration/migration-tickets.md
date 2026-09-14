@@ -10,6 +10,13 @@ All tasks are strictly categorized by domain ownership and operational scope:
 
 ---
 
+## Recently Resolved
+
+* **AI-WhatIf Domain Migration (September 14, 2026):** Fully completed. Frontend bundle rebuilt with `*.mlthrive.com` API endpoints, NGINX Ingress and Let's Encrypt TLS secret `aiwhatif-mlthrive-tls` provisioned, legacy Cilium HTTPRoutes removed from GitOps. ArgoCD application is `Synced / Healthy`.
+* **Cilium Operator & IPAM Outage (Ticket #11 — September 14, 2026):** Resolved. Fixed Gateway API TLSRoute CRD compatibility (`v1alpha2 served=true`). Both `cilium-operator` pods recovered (`2/2 Ready`), worker node `medium-fbfpz-5brrp` received PodCIDR, Cilium DaemonSet `6/6 Ready`, blocked workloads (Segmentation3D backend, Loki) unblocked and running.
+
+---
+
 # 1. APPLICATION FIXES (Frontend Rebuilds / Hardcoded API URLs)
 
 ## Ticket #1: Causal Modeling frontend still uses old nightingaleheart.com API URL after domain migration
@@ -598,174 +605,86 @@ AWS can only be considered ready for decommissioning when every S3 bucket and RD
 
 # 4. CLUSTER INFRASTRUCTURE (Pre-existing Kubernetes / CNI / Cilium Issues)
 
-## Ticket #11: Cilium operators are in CrashLoopBackOff, preventing IPAM allocation on the new worker node
+## Ticket #11: RESOLVED — Cilium operator / Gateway API TLSRoute compatibility blocked IPAM
 
 **Service:** Cluster-wide CNI / IPAM (`kube-system/cilium-operator`, `cilium`)  
 **Component:** Cilium Operator & Gateway API TLSRoute CRD compatibility  
-**Discovered:** September 14, 2026 (during Segmentation3D backend 503 troubleshooting)  
-**Status:** Open / Infra Escalation  
-**Severity:** Critical (Blocks pod scheduling and CNI sandbox creation on worker node `medium-fbfpz-5brrp`)  
-  
+**Discovered:** September 14, 2026  
+**Resolved:** September 14, 2026  
+**Status:** Resolved / Verified  
+**Cilium:** 6/6 Ready  
+**cilium-operator:** 2/2 Ready  
+**medium-fbfpz-5brrp:** Ready  
+**PodCIDR:** 192.168.4.0/24  
+**Severity:** Critical → Resolved
 
-### Description
+### Root Cause
 
-During validation of the `mlthrive.com` domain migration, it was identified that the Segmentation3D backend returns HTTP `503` because its Kubernetes Service currently has no ready backend endpoints.
+The cluster runs Cilium 1.18.6 with Gateway API enabled.
 
-Further investigation shows that this is caused by a **pre-existing cluster networking issue and is not related to the domain migration**.
-
-Both Cilium operator pods are currently in `CrashLoopBackOff`. The operators fail during Gateway API controller initialization because Cilium attempts to use the `TLSRoute` resource with API version:
+`Cilium 1.18.6` expected `TLSRoute/v1alpha2` (`gateway.networking.k8s.io/v1alpha2`), whereas the installed Gateway API v1.6.1 standard CRD had:
 
 ```text
-gateway.networking.k8s.io/v1alpha2
+v1        served=true  storage=true
+v1alpha2  served=false storage=false
+v1alpha3  served=false storage=false
 ```
 
-The installed `TLSRoute` CRD exists, but currently serves only:
+Because `v1alpha2` had `served=false`, both `cilium-operator` replicas crashed during startup with:
 
 ```text
-v1        served=true
-v1alpha2  served=false
-v1alpha3  served=false
-```
-
-The Cilium operator therefore terminates with:
-
-```text
-failed to create gateway controller:
-failed to setup reconciler:
 failed to setup field indexer "backendServiceTLSRouteIndex":
-no matches for kind "TLSRoute" in version "gateway.networking.k8s.io/v1alpha2"
+no matches for kind "TLSRoute" in version
+"gateway.networking.k8s.io/v1alpha2"
 ```
 
-Both Cilium operator replicas are affected by the same error and terminate during startup.
+Because both Cilium operators were crashed in `CrashLoopBackOff`, cluster-pool IPAM stopped allocating new PodCIDRs.
 
-### IPAM impact
-
-Cilium is configured to use cluster-pool IPAM:
-
-```text
-ipam: cluster-pool
-cluster-pool-ipv4-cidr: 192.168.0.0/16
-cluster-pool-ipv4-mask-size: 24
-```
-
-Existing worker nodes have Cilium PodCIDRs allocated:
-
-```text
-medium-fbfpz-cjmxf   192.168.0.0/24
-medium-fbfpz-zcvxc   192.168.1.0/24
-medium-fbfpz-swgbb   192.168.2.0/24
-medium-fbfpz-shk4r   192.168.3.0/24
-medium-fbfpz-xwkl8   192.168.5.0/24
-```
-
-However, the newer worker node:
-
-```text
-medium-fbfpz-5brrp
-```
-
-has no value in:
-
-```text
-CiliumNode.spec.ipam.podCIDRs (<none>)
-```
-
-The Cilium agent on this node consequently fails to become ready and repeatedly reports:
+Worker node `medium-fbfpz-5brrp` was left without a PodCIDR allocation, causing its local Cilium agent (`cilium-jmhx6`) to continuously fail:
 
 ```text
 required IPv4 PodCIDR not available
 ```
 
-The agent successfully connects to the Kubernetes API and reads the Cilium resources before reaching this state, so this is not an API connectivity problem. The Cilium agent on this node has been continuously restarting and its startup probe fails.
+Workloads scheduled to `medium-fbfpz-5brrp` remained stuck in `ContainerCreating` / `FailedCreatePodSandBox` because the Cilium CNI sandbox could not be created.
 
-### Workload impact
+### Resolution / Verification
 
-Pods scheduled to `medium-fbfpz-5brrp` cannot create their network sandbox because the Cilium CNI agent is not available.
+1. **Backup:** A backup of the existing `tlsroutes.gateway.networking.k8s.io` CRD was exported (`tlsroutes-crd-backup-v1.6.1-standard.yaml`).
+2. **Compatibility Fix:** A targeted compatibility patch was applied to the CRD:
+   ```text
+   v1alpha2 served=false  →  v1alpha2 served=true
+   ```
+   No CRD downgrade, CiliumNode manual edit, or full Gateway API bundle replacement was performed.
+3. **Recovery & Verification:**
+   * Both `cilium-operator` replicas immediately recovered to `2/2 Ready`.
+   * Cilium DaemonSet recovered to `6/6 Ready`.
+   * Worker node `medium-fbfpz-5brrp` received PodCIDR `192.168.4.0/24`.
+   * The local Cilium agent became `1/1 Running` and initialized `/var/run/cilium/cilium.sock`.
+   * Workloads previously blocked on the node (including `healthview-segmentation3d-backend` and Loki) successfully created network sandboxes and became `Running`.
+   * Node was uncordoned and is healthy:
+     ```text
+     Status:            Resolved / Verified
+     Cilium:            6/6 Ready
+     cilium-operator:   2/2 Ready
+     medium-fbfpz-5brrp: Ready
+     PodCIDR:           192.168.4.0/24
+     ```
 
-Example error:
+### Critical Upgrade Warning / Follow-up
 
-```text
-FailedCreatePodSandBox
+> [!WARNING]
+> **CRITICAL INFRASTRUCTURE WARNING: Gateway API CRD Compatibility & cilium-operator**  
+> Setting `v1alpha2 served=true` on CRD `tlsroutes.gateway.networking.k8s.io` is a **runtime compatibility fix** for Cilium 1.18.6.  
+> If the Gateway API CRDs are reinstalled or upgraded in the future, standard upstream bundles will overwrite this field back to `served=false`.  
+> This will immediately crash both `cilium-operator` pods, halting cluster-pool IPAM and preventing pods from launching on newly joined nodes.  
+> **Mandatory upgrade procedure:** Before any Kubernetes, Cilium, or Gateway API upgrade, verify `TLSRoute` version requirements and ensure `v1alpha2 served=true` is preserved until Cilium is upgraded to a version that no longer depends on `v1alpha2`.
 
-plugin type="cilium-cni" failed (add):
-unable to connect to Cilium agent
+### Domain Migration Impact
 
-dial unix /var/run/cilium/cilium.sock:
-connect: no such file or directory
-```
+The issue was not caused by the `nightingaleheart.com` → `mlthrive.com` domain migration; it was a pre-existing infrastructure incompatibility revealed during migration validation.
 
-One currently affected workload is:
-
-```text
-healthview-segmentation3d-backend
-```
-
-Current state:
-
-```text
-Deployment: 0/1 Ready
-Service endpoints: none
-API: HTTP 503
-```
-
-The backend pod scheduled to `medium-fbfpz-5brrp` has been unable to start because of this Cilium/CNI issue.
-
-### This predates the domain migration
-
-This issue was already present before the `nightingaleheart.com` → `mlthrive.com` migration.
-
-The old Segmentation3D API hostname was tested directly against the same NGINX load balancer and also returns:
-
-```text
-HTTP 503
-```
-
-The new `mlthrive.com` DNS, Ingress and TLS configuration is working correctly. The new certificate was successfully issued and the frontend is reachable over the new domain. The 503 occurs after the request reaches Kubernetes because the backend Service has no ready endpoint.
-
-Therefore, the domain migration did **not** cause the Segmentation3D backend failure.
-
-### Required action
-
-The cluster networking configuration needs to be investigated and repaired:
-
-```text
-1. Restore the Cilium operator pods to a healthy state.
-
-2. Resolve the compatibility mismatch between the installed
-   Gateway API TLSRoute CRD versions and Cilium 1.18.6.
-
-   Current TLSRoute CRD:
-   - v1 served=true
-   - v1alpha2 served=false
-   - v1alpha3 served=false
-
-   Cilium operator currently expects:
-   gateway.networking.k8s.io/v1alpha2 TLSRoute
-
-3. Verify that Cilium cluster-pool IPAM starts allocating
-   PodCIDRs again.
-
-4. Confirm that medium-fbfpz-5brrp receives a value in:
-   CiliumNode.spec.ipam.podCIDRs
-
-5. Verify that the Cilium agent on medium-fbfpz-5brrp
-   becomes Ready and stops restarting.
-
-6. Verify that new pods can successfully create CNI sandboxes
-   on the node.
-
-7. Recover/restart affected workloads after Cilium networking
-   is healthy.
-
-8. Verify that healthview-segmentation3d-backend receives a
-   ready endpoint and that the API no longer returns HTTP 503.
-```
-
-Changes to the Gateway API CRDs or Cilium should be reviewed before applying them, because this cluster also uses **Cilium Gateway API resources for other workloads** (such as `ai-whatif`).
-
-The current issue should therefore be handled as a **cluster infrastructure/networking issue**, separately from the domain migration.
-
-*A ready-to-submit support request for UpCloud Managed Kubernetes Support is documented in [upcloud-support-ticket-cilium.md](file:///d:/Projects/Upcloud/upcloud-support-ticket-cilium.md).*
+AI-WhatIf no longer relies on Cilium HTTPRoutes. Legacy `nightingaleheart.com` HTTPRoutes were removed from GitOps after migration to NGINX Ingress (`aiwhatif-ingress`, `aiwhatif-mlthrive-tls`), and the ArgoCD application is `Synced / Healthy`.
 
 ---
 
@@ -779,9 +698,11 @@ The current issue should therefore be handled as a **cluster infrastructure/netw
 
 ### Description
 
-The domain/Ingress/TLS migration to mlthrive.com is complete.
-However, the backend migration/configuration appears incomplete. The Argo-managed production Secret is currently sourced from secret.example.yaml, contains placeholder credentials (CHANGE_ME), and still contains the old nightingaleheart.com values for FRONTEND_URL and ALLOWED_ORIGINS.
-The backend Deployment has no ready replicas and the API returns HTTP 503. This condition predates the mlthrive.com migration.
+Following the resolution of the Cilium/IPAM outage (Ticket #11), the AdaptaTutor backend pod successfully received its CNI network sandbox and was allocated an IPv4 PodIP (`192.168.4.x`). However, the container immediately failed startup and entered **`CrashLoopBackOff`**.
+
+This runtime behavior definitively confirms that the remaining AdaptaTutor failure is an **application, backend configuration, database, and secrets issue**, and **not** a Kubernetes CNI or networking problem.
+
+The production Secret still contains placeholder credentials (`CHANGE_ME`) and legacy origin values, and the API remains unavailable:
 
 ```text
 DATABASE_URL = CHANGE_ME
@@ -794,8 +715,6 @@ ADMIN_PASSWORD = CHANGE_ME
 FRONTEND_URL = https://adaptatutor.nightingaleheart.com
 ALLOWED_ORIGINS = https://adaptatutor.nightingaleheart.com
 ```
-
-Both the old and new API hostnames return HTTP `503`, confirming that this issue predates the `mlthrive.com` domain migration.
 
 The Secret is managed directly by the ArgoCD application and originates from `apps/healthmap-adaptatutor/secret.example.yaml`. No ExternalSecret, SealedSecret or SOPS-based secret management was identified in the GitOps repository.
 

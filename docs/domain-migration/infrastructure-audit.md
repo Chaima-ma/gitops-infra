@@ -3,8 +3,8 @@
 **Audit Date:** September 14, 2026  
 **Platform:** UpCloud Managed Kubernetes (UKS)  
 **Ingress Entry Points (UpCloud Managed Load Balancers):**  
-- **LB №1 (NGINX Ingress):** `lb-0a9b1179d97749e8914609fb8f972856-1.upcloudlb.com` (15 primary services)  
-- **LB №2 (Cilium Gateway API):** `lb-0a26cfb0d0f44bcf921ff7ba806f1739-1.upcloudlb.com` (only `ai-whatif` + redirect)  
+- **LB №1 (NGINX Ingress):** `lb-0a9b1179d97749e8914609fb8f972856-1.upcloudlb.com` (`212.147.228.214`) — all 15 production services (including `ai-whatif`)  
+- **LB №2 (Cilium Gateway API):** `lb-0a26cfb0d0f44bcf921ff7ba806f1739-1.upcloudlb.com` (`212.147.228.215`) — legacy Gateway LB (previously served `ai-whatif`; now only `http-redirect`)  
 **Ingress Controllers:** NGINX Ingress Controller + Cilium Gateway API Controller  
 **Cluster Legacy Domain:** `*.nightingaleheart.com` (migrated to `mlthrive.com`)
 
@@ -16,20 +16,20 @@ Analysis of the cluster's network routing and TLS certificates revealed the foll
 
 | Metric | Value | Status |
 | :--- | :--- | :--- |
-| **Ingress Entry Points (UpCloud LB)** | **2 independent Load Balancers** | ✅ Both active and programmed |
+| **Ingress Entry Points (UpCloud LB)** | **2 independent Load Balancers** | ✅ Both active (LB №1 primary, LB №2 legacy gateway) |
 | **Total Ingress Resources** | 18 | 15 operational + 1 catch-all + 2 stale ACME solvers |
-| **Gateway API (Cilium)** | 1 Gateway (`api-gateway`) + 4 HTTPRoute | ✅ Active (HTTP: 1 route, HTTPS: 3 routes) |
-| **Total Routed Hosts** | 20 unique hosts + 1 catch-all (`*`) | Active |
+| **Gateway API (Cilium)** | 1 Gateway (`api-gateway`) + 1 active HTTPRoute | HTTP: 1 route (`http-redirect`); AI-WhatIf routes pruned |
+| **Total Routed Hosts** | 20 unique hosts + 1 catch-all (`*`) | Active on `mlthrive.com` |
 | **Total TLS Certificates (Cert-Manager)** | 18 | 16 Ready (True), **2 Not Ready (False)** |
 | **ClusterIssuer / Issuer** | `letsencrypt-prod` (Cluster), `gateway/cluster-issuer-api-gateway` | Ready (True) |
-| **Critical Incidents** | Stalled certificate issuance in `healthmap-adaptatutor` | ⚠️ Addressed via Ticket #12 |
+| **Critical Incidents** | Cilium operator crash / IPAM failure | 🟢 **Resolved** (Ticket #11); AdaptaTutor backend pending (#12) |
 
 ```mermaid
 flowchart TD
     subgraph DNS["DNS Records (Cloudflare)"]
         D1["*.mlthrive.com (Wildcard)"] --> OBJ["UpCloud Object Storage<br/>(6ftru.upcloudobjects.com)"]
         D2["Explicit K8s CNAMEs<br/>(worldhealthmap, etc.)"] --> LB1
-        D3["ai-whatif (Gateway API)"] --> LB2
+        D3["ai-whatif.mlthrive.com<br/>(and 3 API hosts)"] --> LB1
     end
 
     subgraph LB1["LB №1: NGINX Ingress LB<br/><code>lb-0a9b1179...upcloudlb.com</code>"]
@@ -40,12 +40,11 @@ flowchart TD
         GW["Cilium Gateway (gateway/api-gateway)<br/>TLS: Wildcard via Cloudflare DNS-01"]
     end
 
-    NIC -->|15 production services| Apps["worldhealthmap, ecg, causal, echo, etc."]
+    NIC -->|15 production services| Apps["worldhealthmap, ai-whatif, ecg, causal, echo, etc."]
     NIC -->|Catch-all * / HTTP:80| Def["default / cloud-web-service"]
-    NIC -->|TLS Failed / 75d| Adapt["healthmap-adaptatutor (Failed)"]
+    NIC -->|Backend Pending / #12| Adapt["healthmap-adaptatutor (CrashLoop)"]
 
-    GW -->|3 x HTTPRoute| AI["ai-whatif (frontend, api-r, api-py)"]
-    GW -->|1 x HTTPRoute| Redir["gateway / http-redirect"]
+    GW -->|1 x HTTPRoute (legacy redirect)| Redir["gateway / http-redirect"]
 ```
 
 ---
@@ -83,10 +82,10 @@ flowchart TD
 | `adaptatutor.nightingaleheart.com` | `healthmap-adaptatutor` | `cm-acme-http-solver-qsffv` | ❌ (80) | `cm-acme-http-solver-l4dlh` | Stale solver (lingered 45 days) |
 | `api-adaptatutor.nightingaleheart.com` | `healthmap-adaptatutor` | `healthmap-adaptatutor` | ⚠️ Failed | `healthmap-adaptatutor-backend` | Certificate status False |
 | `api-adaptatutor.nightingaleheart.com` | `healthmap-adaptatutor` | `cm-acme-http-solver-5p4md` | ❌ (80) | `cm-acme-http-solver-85pjg` | Stale solver (lingered 45 days) |
-| `aiwhatif.nightingaleheart.com` | `ai-whatif` | `aiwhatif-ingress` | ✅ True | `aiwhatif-frontend-service` | Web UI |
-| `healthyheart.nightingaleheart.com` | `ai-whatif` | `aiwhatif-ingress` | ✅ True | `aiwhatif-frontend-service` | Additional UI alias |
-| `api.aiwhatif.nightingaleheart.com` | `ai-whatif` | `aiwhatif-ingress` | ✅ True | `aiwhatif-backend-r-service` | R Backend API |
-| `api-python.aiwhatif.nightingaleheart.com`| `ai-whatif` | `aiwhatif-ingress` | ✅ True | `aiwhatif-backend-py-service` | Python Backend API |
+| `aiwhatif.mlthrive.com` | `ai-whatif` | `aiwhatif-ingress` | ✅ True | `aiwhatif-frontend-service` | Web UI (Consolidated onto NGINX) |
+| `healthyheart.mlthrive.com` | `ai-whatif` | `aiwhatif-ingress` | ✅ True | `aiwhatif-frontend-service` | Additional UI alias |
+| `api.aiwhatif.mlthrive.com` | `ai-whatif` | `aiwhatif-ingress` | ✅ True | `aiwhatif-backend-r-service` | R Backend API |
+| `api-python.aiwhatif.mlthrive.com`| `ai-whatif` | `aiwhatif-ingress` | ✅ True | `aiwhatif-backend-py-service` | Python Backend API |
 | `api-cardiomegaly.nightingaleheart.com` | `healthview-cardiomegaly-cnn`| `cardiomegaly-ingress` | ✅ True | `cardiomegaly-backend-service` | ML API |
 | `cardiomegaly-cnn.nightingaleheart.com` | `healthview-cardiomegaly-cnn`| `cardiomegaly-ingress` | ✅ True | `cardiomegaly-frontend-service`| Web UI |
 | `api-causal-modeling.nightingaleheart.com`| `causal-modeling` | `causal-modeling-ingress` | ✅ True | `causal-modeling-service-backend` | Backend API |
@@ -122,7 +121,7 @@ flowchart TD
 
 | Namespace | Certificate Name | Ready | Secret Name | Age | Status |
 | :--- | :--- | :---: | :--- | :--- | :---: |
-| `ai-whatif` | `aiwhatif-tls` | **True** | `aiwhatif-tls` | 98d | 🟢 Ready |
+| `ai-whatif` | `aiwhatif-mlthrive-tls` | **True** | `aiwhatif-mlthrive-tls` | 1d | 🟢 Ready (HTTP-01) |
 | `causal-modeling` | `causal-modeling-tls` | **True** | `causal-modeling-tls` | 16d | 🟢 Ready |
 | `ecgprediction` | `ecgprediction-tls` | **True** | `ecgprediction-tls` | 104d | 🟢 Ready |
 | `gateway` | `wildcard-nightingale-certificate` | **True** | `wildcard-nightingale-certificate` | 44d | 🟢 Ready (Wildcard) |
@@ -192,15 +191,31 @@ The audit confirmed the presence of a second active load balancer and Gateway AP
 1. **Port 80 (HTTP):**
    - 1 attached route: `gateway/http-redirect` (redirect to HTTPS).
 2. **Port 443 (HTTPS):**
-   - 3 attached routes — **all belonging to `ai-whatif`**:
-     * `frontend-aiwhatif-httproute`: host `aiwhatif.nightingaleheart.com`
-     * `backendr-aiwhatif-httproute`: host `api.aiwhatif.nightingaleheart.com`
-     * `backendpy-httproute`: host `api-python.aiwhatif.nightingaleheart.com`
+   - **0 active routes.** (All three legacy `nightingaleheart.com` HTTPRoutes were removed).
+
+> [!NOTE]
+> **Historical Routing Consolidation:**  
+> AI-WhatIf previously had both NGINX Ingress and Cilium Gateway API routes. During the `mlthrive.com` migration, traffic was consolidated onto the standard NGINX Ingress path. The three legacy `nightingaleheart.com` HTTPRoutes were removed from GitOps and pruned by ArgoCD.  
+> 
+> The three files:
+> ```text
+> backendPy-httpRoute.yaml
+> backendR-httpRoute.yaml
+> frontend-httpRoute.yaml
+> ```
+> no longer exist in `master`.
+
+> [!WARNING]
+> **CRITICAL INFRASTRUCTURE WARNING: Gateway API CRD Compatibility & cilium-operator**  
+> In September 2026, an outage occurred because Cilium 1.18.6 required `TLSRoute/v1alpha2`, while Gateway API v1.6.1 standard had `v1alpha2 served=false`.  
+> A live compatibility patch was applied to CRD `tlsroutes.gateway.networking.k8s.io` setting `v1alpha2 served=true` (Ticket #11).  
+> **Upgrade Risk:** This fix is a runtime CRD setting. Any future reinstallation or upgrade of the Gateway API CRD package will overwrite this setting back to `served=false`, which will immediately cause both `cilium-operator` pods to enter `CrashLoopBackOff`, breaking cluster-pool IPAM and preventing new pods from acquiring CNI network sandboxes.  
+> Before any Gateway API CRD or Cilium upgrade, verify `TLSRoute` version compatibility and ensure `v1alpha2` remains `served=true` until Cilium is upgraded to a version that no longer depends on `v1alpha2`.
 
 > [!IMPORTANT]
 > **Key Architectural Takeaway:**  
-> - **14 of 15 services** (including `worldhealthmap`) route **exclusively through NGINX Ingress (LB №1)**. Their Cloudflare DNS must target `lb-0a9b1179d97749e8914609fb8f972856-1.upcloudlb.com`.
-> - **`ai-whatif`** is duplicated across both NGINX Ingress and Cilium Gateway API.
+> - **All 15 production services** route **exclusively through NGINX Ingress (LB №1)** (`lb-0a9b1179d97749e8914609fb8f972856-1.upcloudlb.com`).
+> - **LB №2** is preserved only for legacy redirect listeners. Dual routing for `ai-whatif` has been eliminated.
 
 ---
 

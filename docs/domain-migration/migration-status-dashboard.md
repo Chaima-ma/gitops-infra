@@ -2,7 +2,7 @@
 
 **Last Updated:** September 14, 2026  
 **Primary Ingress Load Balancer:** `lb-0a9b1179d97749e8914609fb8f972856-1.upcloudlb.com` (`212.147.228.214`)  
-**Overall Progress:** `[██████████████░] 93% (14 of 15 services migrated on K8s Ingress/TLS level)`
+**Overall Progress:** `[████████████████] 100% (15 of 15 services migrated on K8s Ingress/TLS level)`
 
 ---
 
@@ -21,10 +21,10 @@
 | 9 | **Cardiomegaly CNN** | 2 | `cardiomegaly-cnn.mlthrive.com`<br/>`api-cardiomegaly.mlthrive.com` | ✅ OK | ✅ Synced | ✅ `READY: True` | `200 OK` | 🟡 **Ticket #7** (Auth0 callback) |
 | 10 | **Harmonia Health** | 2 | `harmoniahealth.mlthrive.com`<br/>`api-harmoniahealth.mlthrive.com` | ✅ OK | ✅ Synced | ✅ `READY: True` | `200 OK` (Both) | 🟡 **Ticket #5** (Frontend old API URL) |
 | 11 | **EchoGame** | 3 | `echogame.mlthrive.com`<br/>`api-echogame.mlthrive.com` | ✅ OK | ✅ Synced | ✅ `READY: True` | `200 OK` (Domain/API) | 🟡 **Ticket #3 & #8** (Frontend hardcode + Media AWS) |
-| 12 | **3D Segmentation** | 3 | `segmentation.mlthrive.com`<br/>`segmentation-api.mlthrive.com` | ✅ OK | ✅ Synced | ✅ `READY: True` | Frontend `200` | 🟡 **Ticket #9 & #11** (S3 Models + Cilium CNI 503) |
+| 12 | **3D Segmentation** | 3 | `segmentation.mlthrive.com`<br/>`segmentation-api.mlthrive.com` | ✅ OK | ✅ Synced | ✅ `READY: True` | Frontend `200` | 🟡 **Ticket #9** (S3 Models; CNI unblocked via Ticket #11) |
 | 13 | **SurgicSense** | 3 | `surgicsense.mlthrive.com`<br/>`api.surgicsense.mlthrive.com` | ✅ OK | ✅ Synced | ✅ `READY: True` | `200 OK` | 🟡 **Ticket #6 & #7** (Frontend hardcode + Auth0) |
 | 14 | **Adaptatutor** | 4 | `adaptatutor.mlthrive.com`<br/>`api-adaptatutor.mlthrive.com` | ✅ OK | ✅ Synced | ✅ `READY: True` | `200 OK` (Frontend) | 🟢 **Infra Ready** / 🔴 **Ticket #12** (Backend/DB migration) |
-| 15 | **AI What-If** | 4 | `aiwhatif.mlthrive.com` + 3 API hosts | ⏳ Pending CNAME | ⏳ Queued | ⏳ Queued | — | 🔴 **Gateway API / Cilium Support** (Ticket #11) |
+| 15 | **AI What-If** | 4 | `aiwhatif.mlthrive.com`<br/>`healthyheart.mlthrive.com`<br/>`api.aiwhatif.mlthrive.com`<br/>`api-python.aiwhatif.mlthrive.com` | ✅ OK | ✅ Synced | ✅ `READY: True` | `200 OK` (All 4) | 🟢 **Complete / Verified** (NGINX LB `212.147.228.214`; legacy Cilium HTTPRoutes pruned) |
 
 ---
 
@@ -58,6 +58,23 @@
   Network layer and TLS operational (`307 Temporary Redirect` to `/auth/login`).
 * **Blocker Status:** Login awaits addition of `https://heartaware.mlthrive.com/auth/callback` in Auth0 Dashboard (see [pending-actions-and-auth0.md](file:///d:/Projects/Upcloud/pending-actions-and-auth0.md)).
 
+### 🟢 5. `aiwhatif.mlthrive.com` (`ai-whatif`)
+* **Ingress:** [apps/ai-whatif/ingress.yaml](file:///d:/Projects/Upcloud/gitops-infra/apps/ai-whatif/ingress.yaml)
+* **Secret:** `aiwhatif-mlthrive-tls` (`READY: True`, Let's Encrypt HTTP-01 covering all 4 SANs)
+* **Target Hosts & Backends:**
+  * `aiwhatif.mlthrive.com` → `aiwhatif-frontend-service:80`
+  * `healthyheart.mlthrive.com` → `aiwhatif-frontend-service:80` (alias)
+  * `api.aiwhatif.mlthrive.com` → `aiwhatif-backend-r-service:9000`
+  * `api-python.aiwhatif.mlthrive.com` → `aiwhatif-backend-py-service:8000`
+* **Routing Architecture:** All 4 hostnames route directly to NGINX Ingress Load Balancer `lb-0a9b1179d97749e8914609fb8f972856-1.upcloudlb.com` (`212.147.228.214`). The 3 legacy Cilium HTTPRoutes (`backendPy-httpRoute.yaml`, `backendR-httpRoute.yaml`, `frontend-httpRoute.yaml`) were permanently deleted from GitOps and pruned from the cluster.
+* **Verification Result:**
+  * `https://aiwhatif.mlthrive.com/` → **`200 OK`**
+  * `https://healthyheart.mlthrive.com/` → **`200 OK`**
+  * `https://api.aiwhatif.mlthrive.com/` → **`200 OK`**
+  * `https://api-python.aiwhatif.mlthrive.com/docs` → **`200 OK`**
+  * ArgoCD Status: **`Synced / Healthy`**
+  * HTTPRoute resources in `ai-whatif`: **none**
+
 ---
 
 ## 3. Legacy Domain Cleanup Backlog (`nightingaleheart.com`)
@@ -82,6 +99,8 @@ Following confirmation of stable operation on `mlthrive.com`, legacy `nightingal
 | `apps/healthview-segmentation3d/ingress.yaml` | `segmentation.*`, `segmentation-api.*` + `healthview-segmentation3d-tls` | ✅ **Cleaned in Git & K8s** |
 | `apps/healthview-cardiomegaly-cnn/ingress.yaml` | `cardiomegaly-cnn.*`, `api-cardiomegaly.*` + `cardiomegaly-tls` | ✅ **Cleaned in Git & K8s** |
 | `apps/healthview-surgicsense/ingress.yaml` | `surgicsense.*`, `api.surgicsense.*` + `surgicsense-tls` | ✅ **Cleaned in Git & K8s** |
+| `apps/ai-whatif/ingress.yaml` | `aiwhatif.*`, `healthyheart.*`, `api.*`, `api-python.*` + `aiwhatif-tls` | ✅ **Cleaned in Git & K8s** |
+| `apps/ai-whatif/*-httpRoute.yaml` | 3 legacy HTTPRoutes (`frontend`, `backendPy`, `backendR`) | ✅ **Removed from Git & Pruned from K8s** |
 
 ---
 
@@ -162,9 +181,8 @@ Workload files requiring updates in application code / deployments:
 
 ### 5. Infrastructure Remnants (Issuer Email & Gateway API)
 * `apps/cluster-issuer/cluster-issuer.yaml` (line 7): `email: info@nightingaleheart.com`
-* `apps/cluster-issuer/cluster-issuer-wildcard.yaml` (line 8): `email: info@nightingaleheart.com`
-* `apps/cilium-apiGateway/api-gateway.yaml`: `hostname: "*.nightingaleheart.com"` + `wildcard-nightingale-certificate`
-* `apps/ai-whatif/*-httpRoute.yaml`: hosts `*.nightingaleheart.com`
+* `apps/cilium-apiGateway/api-gateway.yaml`: `hostname: "*.nightingaleheart.com"` + `wildcard-nightingale-certificate` (Gateway LB №2 listener)
+* `apps/ai-whatif/*-httpRoute.yaml`: **Cleaned up** — all 3 legacy HTTPRoutes removed from GitOps and pruned from cluster; traffic consolidated onto NGINX Ingress.
 
 ---
 

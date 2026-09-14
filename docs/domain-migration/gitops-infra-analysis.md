@@ -94,8 +94,14 @@ Live cluster inspection revealed that **two independent UpCloud Managed Load Bal
 
 | Load Balancer | IP / UpCloud LB Hostname | Served Services | Controller / Mechanism |
 | :--- | :--- | :--- | :--- |
-| **LB №1 (Ingress)** | `lb-0a9b1179d97749e8914609fb8f972856-1.upcloudlb.com` (`212.147.228.214`) | **15 production services** (`worldhealthmap`, `echogame`, `causal-modeling`, etc.) | NGINX Ingress Controller |
-| **LB №2 (Gateway API)** | `lb-0a26cfb0d0f44bcf921ff7ba806f1739-1.upcloudlb.com` (`212.147.228.215`) | **Only `ai-whatif`** (3 HTTPRoutes) + `http-redirect` | Cilium Gateway API (`gatewayClassName: cilium`) |
+| **LB №1 (Ingress)** | `lb-0a9b1179d97749e8914609fb8f972856-1.upcloudlb.com` (`212.147.228.214`) | **All 15 production services** (including `ai-whatif`, `worldhealthmap`, etc.) | NGINX Ingress Controller |
+| **LB №2 (Gateway API)** | `lb-0a26cfb0d0f44bcf921ff7ba806f1739-1.upcloudlb.com` (`212.147.228.215`) | **Legacy Gateway LB** (previously served `ai-whatif`; now only `http-redirect`) | Cilium Gateway API (`gatewayClassName: cilium`) |
+
+> [!WARNING]
+> **CRITICAL INFRASTRUCTURE WARNING: Gateway API CRD Compatibility & cilium-operator**  
+> Cilium 1.18.6 expects `gateway.networking.k8s.io/v1alpha2` for TLSRoute. The installed Gateway API v1.6.1 standard CRD had `v1alpha2 served=false`, which caused both `cilium-operator` pods to crash and halted cluster-pool IPAM on new worker nodes (Ticket #11).  
+> The issue was resolved by patching `tlsroutes.gateway.networking.k8s.io` to set `v1alpha2 served=true`.  
+> **Upgrade Risk:** This is a runtime compatibility fix on the cluster CRD. Any subsequent Gateway API CRD reinstallation or upgrade may overwrite this field back to `served=false`, immediately throwing `cilium-operator` into `CrashLoopBackOff`. Always verify `TLSRoute` version support before applying Gateway API CRD updates!
 
 ### Infrastructure Components Summary Table
 
@@ -143,7 +149,8 @@ The `apps/` directory houses **15 production services**, organized into the foll
 * **`ai-whatif`**:
   * Stack: React frontend + R API (`backend-r-service`, port 9000) + Python API (`backend-py-service`, port 8000).
   * Equipped with HPAs (`hpa-backend-py`, `hpa-backend-r`) and NetworkPolicies.
-  * Dual routing configuration: legacy Ingress + `HTTPRoute` resources for Gateway API.
+  * **Routing Consolidation:** AI-WhatIf previously had both NGINX Ingress and Cilium Gateway API routes. During the `mlthrive.com` migration, traffic was consolidated onto the standard NGINX Ingress path. The three legacy `nightingaleheart.com` HTTPRoutes were removed from GitOps and pruned by ArgoCD.
+  * *Note:* The three files `backendPy-httpRoute.yaml`, `backendR-httpRoute.yaml`, and `frontend-httpRoute.yaml` no longer exist in `master`.
 * **`causal-modeling`**: Causal modeling service (Frontend + Backend API).
 * **`healthview-ecgprediction`**: ECG analysis and prediction.
 * **`healthview-cardiomegaly-cnn`**: Convolutional neural network for detecting cardiomegaly from chest X-rays.
@@ -169,33 +176,33 @@ The `apps/` directory houses **15 production services**, organized into the foll
 
 ## 6. Detailed Domain Dependency Map (`nightingaleheart.com`)
 
-Migrating services to `mlthrive.com` required updating the following 25 files in `gitops-infra`:
+Migrating services to `mlthrive.com` required updating the following files in `gitops-infra`:
 
 | Category | File | Target Content | Action Required |
 | :--- | :--- | :--- | :--- |
-| **Ingress** | `apps/ai-whatif/ingress.yaml` | `aiwhatif.nightingaleheart.com`, `healthyheart...`, `api...`, `api-python...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/causal-modeling/ingress.yaml` | `causal-modeling.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthmap-adaptatutor/ingress.yaml` | `adaptatutor.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthmap-heart-sayings/ingress.yaml` | `healthmap.nightingaleheart.com` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthmap-pollutionmap/ingress.yaml` | `pollutionmap.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthmap-worldhealthmap/ingress.yaml` | `worldhealthmap.nightingaleheart.com` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthview-cardiomegaly-cnn/ingress.yaml`| `cardiomegaly-cnn.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthview-ecgprediction/ingress.yaml` | `ecgprediction.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthview-echoexplore/ingress.yaml` | `echoexplore.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthview-echogame/ingress.yaml` | `echogame.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthview-segmentation3d/ingress.yaml` | `segmentation.nightingaleheart.com`, `segmentation-api...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/healthview-surgicsense/ingress.yaml` | `surgicsense.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/nightingale-harmoniahealth/ingress.yaml` | `harmoniahealth.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/nightingale-heartaware/ingress.yaml` | `heartaware.nightingaleheart.com` | Replace/add `*.mlthrive.com` |
-| **Ingress** | `apps/nightingale-lifesaver/ingress.yaml` | `lifesaver.nightingaleheart.com` | Replace/add `*.mlthrive.com` |
-| **Gateway API** | `apps/cilium-apiGateway/api-gateway.yaml` | `hostname: "*.nightingaleheart.com"` | Replace with `*.mlthrive.com` |
-| **HTTPRoute** | `apps/ai-whatif/frontend-httpRoute.yaml` | `aiwhatif.nightingaleheart.com` | Replace with `aiwhatif.mlthrive.com` |
-| **HTTPRoute** | `apps/ai-whatif/backendPy-httpRoute.yaml` | `api-python.aiwhatif.nightingaleheart.com` | Replace host |
-| **HTTPRoute** | `apps/ai-whatif/backendR-httpRoute.yaml` | `api.aiwhatif.nightingaleheart.com` | Replace host |
-| **Hardcoded ENV** | `apps/healthview-echogame/deployment-backend.yaml` | `https://cdn.echogame.nightingaleheart.com` | Update CDN URL |
-| **Hardcoded ENV** | `apps/healthview-echogame/deployment-frontend.yaml`| `api-echogame...`, `cdn.echogame...` | Update API and CDN URL |
-| **Hardcoded Config**| `apps/healthview-surgicsense/configmap.yaml` | `https://surgicsense.nightingaleheart.com/reset-password` | Update reset-password URL |
-| **Hardcoded Config**| `apps/healthview-segmentation3d/frontend-configmap.yaml`| `const API_BASE_URL = "https://segmentation-api.nightingaleheart.com";` | Update API URL |
+| **Ingress** | `apps/ai-whatif/ingress.yaml` | `aiwhatif.nightingaleheart.com`, `healthyheart...`, `api...`, `api-python...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/causal-modeling/ingress.yaml` | `causal-modeling.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthmap-adaptatutor/ingress.yaml` | `adaptatutor.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthmap-heart-sayings/ingress.yaml` | `healthmap.nightingaleheart.com` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthmap-pollutionmap/ingress.yaml` | `pollutionmap.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthmap-worldhealthmap/ingress.yaml` | `worldhealthmap.nightingaleheart.com` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthview-cardiomegaly-cnn/ingress.yaml`| `cardiomegaly-cnn.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthview-ecgprediction/ingress.yaml` | `ecgprediction.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthview-echoexplore/ingress.yaml` | `echoexplore.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthview-echogame/ingress.yaml` | `echogame.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthview-segmentation3d/ingress.yaml` | `segmentation.nightingaleheart.com`, `segmentation-api...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/healthview-surgicsense/ingress.yaml` | `surgicsense.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/nightingale-harmoniahealth/ingress.yaml` | `harmoniahealth.nightingaleheart.com`, `api-...` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/nightingale-heartaware/ingress.yaml` | `heartaware.nightingaleheart.com` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Ingress** | `apps/nightingale-lifesaver/ingress.yaml` | `lifesaver.nightingaleheart.com` | Replace/add `*.mlthrive.com` (✅ Completed) |
+| **Gateway API** | `apps/cilium-apiGateway/api-gateway.yaml` | `hostname: "*.nightingaleheart.com"` | Legacy listener on LB №2 |
+| **HTTPRoute (Pruned)** | `apps/ai-whatif/frontend-httpRoute.yaml` | `aiwhatif.nightingaleheart.com` | **Deleted** from `master` and pruned by ArgoCD |
+| **HTTPRoute (Pruned)** | `apps/ai-whatif/backendPy-httpRoute.yaml` | `api-python.aiwhatif.nightingaleheart.com` | **Deleted** from `master` and pruned by ArgoCD |
+| **HTTPRoute (Pruned)** | `apps/ai-whatif/backendR-httpRoute.yaml` | `api.aiwhatif.nightingaleheart.com` | **Deleted** from `master` and pruned by ArgoCD |
+| **Hardcoded ENV** | `apps/healthview-echogame/deployment-backend.yaml` | `https://cdn.echogame.nightingaleheart.com` | Update CDN URL (Ticket #8) |
+| **Hardcoded ENV** | `apps/healthview-echogame/deployment-frontend.yaml`| `api-echogame...`, `cdn.echogame...` | Update API and CDN URL (Ticket #3 & #8) |
+| **Hardcoded Config**| `apps/healthview-surgicsense/configmap.yaml` | `https://surgicsense.nightingaleheart.com/reset-password` | Updated in GitOps (Ticket #6) |
+| **Hardcoded Config**| `apps/healthview-segmentation3d/frontend-configmap.yaml`| `const API_BASE_URL = "https://segmentation-api.nightingaleheart.com";` | Updated in GitOps |
 | **Issuer Email**| `apps/cluster-issuer/cluster-issuer.yaml` | `email: info@nightingaleheart.com` | Update contact email |
 | **Issuer Email**| `apps/cluster-issuer/cluster-issuer-wildcard.yaml` | `email: info@nightingaleheart.com` | Update contact email |
 
@@ -221,8 +228,8 @@ Migrating services to `mlthrive.com` required updating the following 25 files in
 | :---: | :--- | :--- | :--- |
 | 🔴 **High** | **Migration to `mlthrive.com`** | 25 files tied to legacy domain + DNS collision on `_acme-challenge` with Object Storage. | Use HTTP-01 via NGINX Ingress with dedicated TLS secrets (see `mlthrive-migration-strategy.md`). |
 | 🔴 **High** | **TLS `healthmap-adaptatutor`** | Stalled HTTP-01 challenge blocked ArgoCD synchronization. | Clear invalid solver ingresses and reissue certificate on `mlthrive.com`. |
-| 🟡 **Medium** | **`ai-whatif` OutOfSync** | Indentation error in `backendR-httpRoute.yaml` resulted in `path: null`. | Fix indentation under `rules.matches[0].path` (or prune unused HTTPRoutes). |
-| 🟡 **Medium** | **Networking Dualism** | Concurrent use of NGINX Ingress and Cilium Gateway API. | Standardize routing strategy across the cluster. |
+| 🟢 **Resolved** | **`ai-whatif` OutOfSync** | Defective HTTPRoute removed; consolidated on NGINX Ingress. | `apps/ai-whatif` is `Synced / Healthy` with dedicated TLS secret `aiwhatif-mlthrive-tls`. |
+| 🟢 **Resolved** | **Networking Dualism** | AI-WhatIf was consolidated onto NGINX Ingress. | All 15 applications now route consistently through NGINX Ingress. |
 | 🟢 **Low** | **Root App OutOfSync** | Root application `root` drifted from cluster state. | Perform differential parameter audit between Git and live cluster. |
 
 The complete rollout strategy and step-by-step migration checklist are documented in: [mlthrive-migration-strategy.md](file:///d:/Projects/Upcloud/mlthrive-migration-strategy.md).

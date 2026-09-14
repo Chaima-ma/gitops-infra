@@ -393,15 +393,15 @@ Following the `worldhealthmap` pilot, services were rolled out in structured wav
    - **Backend Migration:** Production secret contains placeholder strings (`CHANGE_ME`) and backend pod has 0 ready replicas (Tracked in Ticket #12).
 
 2. **`ai-whatif`:**
-   - **Routing Architecture:** Dual-routed through NGINX Ingress and Cilium Gateway API (Load Balancer №2: `212.147.228.215`).
-   - **Status:** Deferred pending resolution of cluster-level Cilium operator / Gateway API issue (Ticket #11).
+   - **Routing Architecture:** Consolidated onto standard NGINX Ingress (Load Balancer №1: `212.147.228.214`).
+   - **Status:** **Completed & Verified**. All 4 hosts (`aiwhatif.mlthrive.com`, `healthyheart.mlthrive.com`, `api.aiwhatif.mlthrive.com`, `api-python.aiwhatif.mlthrive.com`) are live on `aiwhatif-ingress` with `aiwhatif-mlthrive-tls`. Legacy Cilium HTTPRoutes (`backendPy-httpRoute.yaml`, `backendR-httpRoute.yaml`, `frontend-httpRoute.yaml`) were deleted from GitOps and pruned by ArgoCD.
 
 ---
 
 ### 🌊 Wave 5: Infrastructure Cleanup & Audit
 1. **Contact Email Updates:**
    - Update `info@nightingaleheart.com` in `apps/cluster-issuer/*.yaml` to the active domain contact address.
-2. **Cilium Gateway Strategy:**
-   - Resolve Gateway API CRD version mismatch with UpCloud Support (Ticket #11) before migrating or retiring LB №2.
+2. **Cilium Gateway & Upgrade Strategy:**
+   - Ticket #11 resolved with `v1alpha2 served=true` compatibility patch. LB №2 is no longer needed for `ai-whatif` traffic. Preserve CRD compatibility during any future Gateway API / Cilium upgrades.
 3. **Cluster Secret Pruning:**
    - Delete orphaned `*-tls` secrets in namespaces after validating traffic on `mlthrive.com`.

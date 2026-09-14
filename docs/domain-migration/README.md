@@ -49,7 +49,7 @@ This directory contains the complete technical documentation, architectural audi
   * **Scope 1: Application Code & Build-Time Hardcodes** (Tickets #1–#6: Causal Modeling, PollutionMap, EchoGame, EchoExplore, HarmoniaHealth, SurgicSense).
   * **Scope 2: External Authentication** (Ticket #7: HeartAware, Cardiomegaly CNN, SurgicSense Auth0 settings).
   * **Scope 3: Storage & Data Migration** (Tickets #8–#10: EchoGame CDN, Segmentation3D models in AWS S3, EchoExplore media; Ticket #13: Full AWS S3 & RDS decommission audit).
-  * **Scope 4: Cluster Infrastructure & Backend Deployments** (Ticket #11: Cilium operator crash/IPAM failure; Ticket #12: AdaptaTutor uncompleted backend/database migration).
+  * **Scope 4: Cluster Infrastructure & Backend Deployments** (Ticket #11: Resolved Cilium operator / Gateway API TLSRoute compatibility and IPAM recovery; Ticket #12: AdaptaTutor uncompleted backend/database migration).
 
 #### 🗄️ [aws-data-migration-audit.md](file:///D:/Projects/Upcloud/aws-data-migration-audit.md)
 * **Description:** Comprehensive inventory, verification workflow, and safety audit for all legacy AWS data resources prior to AWS account decommissioning.
@@ -63,7 +63,7 @@ This directory contains the complete technical documentation, architectural audi
 #### 📝 [domain-migration-cleanup-note-2026-09-14.md](file:///D:/Projects/Upcloud/domain-migration-cleanup-note-2026-09-14.md)
 * **Description:** Technical summary note of the final live cluster audit conducted on September 14, 2026.
 * **Key Contents:**
-  * Confirmation of legacy domain removal across all 14 standard NGINX Ingress manifests.
+  * Confirmation of legacy domain removal across all 15 production NGINX Ingress manifests (including `ai-whatif`).
   * Purging of stale cert-manager ACME challenge resources.
   * Diagnosis and resolution of the SurgicSense ConfigMap `last-applied-configuration` corruption in ArgoCD.
   * Clarification on why historical cluster artifacts generated false-positive legacy domain warnings during raw audits.
@@ -86,7 +86,7 @@ This directory contains the complete technical documentation, architectural audi
   * Inventory and health of all 27 ArgoCD Applications.
   * Ingress ownership matrix (differentiating ArgoCD-managed, dynamic cert-manager solvers, and unmanaged resources).
   * Critical operational rule: impact of `selfHeal: true` and `prune: true` policies on manual CLI modifications.
-  * Root cause analysis of out-of-sync and degraded applications (`root`, `ai-whatif`, `healthmap-adaptatutor`).
+  * Root cause analysis of out-of-sync and degraded applications (`root`, historical `ai-whatif` resolution, `healthmap-adaptatutor`).
 
 #### 📦 [gitops-infra-analysis.md](file:///D:/Projects/Upcloud/gitops-infra-analysis.md)
 * **Description:** In-depth technical breakdown of the `gitops-infra` repository structure and delivery automation.

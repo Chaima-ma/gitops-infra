@@ -55,33 +55,42 @@
 
 ---
 
-## 2. Diagnosis and Resolution of `ai-whatif` ArgoCD Failure
+## 2. Architecture and Resolution for `ai-whatif`
 
-The audit identified the cause of `ai-whatif`'s **OutOfSync / Degraded** status:
+Originally, `ai-whatif` was in an **OutOfSync / Degraded** status under ArgoCD, and was thought to require Cilium Gateway API for routing.
 
-1. **Diagnosis:**  
-   The only out-of-sync resource was `HTTPRoute/backendr-aiwhatif-httproute`. All pods, deployments, and Ingresses were `Synced`.
-2. **Root Cause:**  
-   An indentation error existed in `apps/ai-whatif/backendR-httpRoute.yaml`:
+1. **Historical Root Cause of ArgoCD OutOfSync:**  
+   The single out-of-sync resource was `HTTPRoute/backendr-aiwhatif-httproute`. An indentation error existed in `apps/ai-whatif/backendR-httpRoute.yaml`:
    ```yaml
-   # DEFECTIVE SYNTAX:
+   # HISTORICAL DEFECTIVE SYNTAX:
      rules:
      - matches:
        - path:
          type: PathPrefix
          value: /
    ```
-   Because `type` and `value` were placed at the same indentation level as `path:`, YAML parsed the node as `{"path": null, "type": "PathPrefix", "value": "/"}`. The Cilium controller rejected the invalid route.
-3. **Remediation:**  
-   Correct the indentation:
-   ```yaml
-   # CORRECTED SYNTAX:
-     rules:
-     - matches:
-       - path:
-           type: PathPrefix
-           value: /
+   Because `type` and `value` were placed at the same indentation level as `path:`, YAML parsed the node as `{"path": null, "type": "PathPrefix", "value": "/"}`.
+
+2. **Implemented Resolution (Consolidation onto NGINX Ingress):**  
+   Rather than preserving duplicate routing through Cilium Gateway API or repairing the defective HTTPRoute, **all AI-WhatIf traffic was permanently consolidated onto the standard NGINX Ingress path**.
+   
+   Cilium Gateway is **no longer required** for AI-WhatIf. All three legacy HTTPRoutes (`frontend-httpRoute.yaml`, `backendPy-httpRoute.yaml`, `backendR-httpRoute.yaml`) were deleted from GitOps and pruned from the cluster by ArgoCD.
+
+3. **Final Implemented Architecture:**  
+   ```text
+   aiwhatif.mlthrive.com
+   healthyheart.mlthrive.com
+   api.aiwhatif.mlthrive.com
+   api-python.aiwhatif.mlthrive.com
+           ↓
+   NGINX Ingress (lb-0a9b1179... 212.147.228.214)
+   aiwhatif-mlthrive-tls (HTTP-01 Let's Encrypt)
    ```
+
+   * **Manifest:** [apps/ai-whatif/ingress.yaml](file:///d:/Projects/Upcloud/gitops-infra/apps/ai-whatif/ingress.yaml)
+   * **TLS Secret:** `aiwhatif-mlthrive-tls` (all 4 SANs issued cleanly via HTTP-01)
+   * **Current ArgoCD State:** `Synced / Healthy`
+   * **Cluster HTTPRoutes in `ai-whatif`:** None (pruned)
 
 ---
 
@@ -178,5 +187,5 @@ spec:
 | **Wave 1 (Simple UI)** | `worldhealthmap`, `healthmap-heart-sayings`, `heartaware` | Low | Single hosts, static/SPA frontends |
 | **Wave 2 (Frontend + Backend)** | `causal-modeling`, `ecgprediction`, `pollutionmap`, `cardiomegaly-cnn`, `echoexplore`, `harmoniahealth` | Medium | Dual hosts (UI + API), HTTP-01 certificates |
 | **Wave 3 (ConfigMap / ENV Dependencies)**| `healthview-surgicsense`, `healthview-segmentation3d`, `healthview-echogame` | Medium-High | Requires synchronized updates to ConfigMap/Deployments |
-| **Wave 4 (Complex Services)** | `ai-whatif`, `healthmap-adaptatutor` | High | Gateway API resolution for `ai-whatif`; legacy backend recovery for `adaptatutor` |
+| **Wave 4 (Complex Services)** | `ai-whatif` (Completed: NGINX Ingress), `healthmap-adaptatutor` | High | AI-WhatIf verified on NGINX Ingress; legacy backend recovery for `adaptatutor` (Ticket #12) |
 | **Wave 5 (Infrastructure)** | `cilium-apiGateway`, `cluster-issuer` | Medium | Contact email updates and Gateway API support alignment |
