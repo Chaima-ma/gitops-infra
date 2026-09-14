@@ -14,42 +14,9 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - lifesaver.nightingaleheart.com
-      secretName: lifesaver-tls
-    - hosts:
         - lifesaver.mlthrive.com
       secretName: lifesaver-mlthrive-tls
   rules:
-    - host: lifesaver.nightingaleheart.com
-      http:
-        paths:
-          # React frontend uses REACT_APP_CHATBOT_URL + /api/...
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: nightingale-lifesaver-backend
-                port:
-                  number: 3000
-
-          # Direct Rasa REST webhook, useful if needed externally.
-          - path: /webhooks
-            pathType: Prefix
-            backend:
-              service:
-                name: nightingale-lifesaver-backend
-                port:
-                  number: 5005
-
-          # Frontend must stay last because it catches all remaining paths.
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: nightingale-lifesaver-frontend
-                port:
-                  number: 80
-
     - host: lifesaver.mlthrive.com
       http:
         paths:

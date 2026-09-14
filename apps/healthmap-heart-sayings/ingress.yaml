@@ -11,22 +11,9 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - healthmap.nightingaleheart.com
-      secretName: healthmap-heart-sayings-tls
-    - hosts:
         - healthmap.mlthrive.com
       secretName: healthmap-heart-sayings-mlthrive-tls
   rules:
-    - host: healthmap.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: healthmap-heart-sayings
-                port:
-                  number: 5001
     - host: healthmap.mlthrive.com
       http:
         paths:

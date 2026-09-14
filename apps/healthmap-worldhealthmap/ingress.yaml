@@ -10,25 +10,10 @@ spec:
 
   tls:
     - hosts:
-        - worldhealthmap.nightingaleheart.com
-      secretName: worldhealthmap-tls
-
-    - hosts:
         - worldhealthmap.mlthrive.com
       secretName: worldhealthmap-mlthrive-tls
 
   rules:
-    - host: worldhealthmap.nightingaleheart.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: worldhealthmap-service-frontend
-                port:
-                  number: 80
-
     - host: worldhealthmap.mlthrive.com
       http:
         paths:
