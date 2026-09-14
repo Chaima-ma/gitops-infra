@@ -8,11 +8,18 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+
   tls:
     - hosts:
         - echogame.nightingaleheart.com
         - api-echogame.nightingaleheart.com
       secretName: echogame-tls
+
+    - hosts:
+        - echogame.mlthrive.com
+        - api-echogame.mlthrive.com
+      secretName: echogame-mlthrive-tls
+
   rules:
     - host: echogame.nightingaleheart.com
       http:
@@ -24,7 +31,30 @@ spec:
                 name: echogame-frontend-service
                 port:
                   number: 80
+
     - host: api-echogame.nightingaleheart.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: echogame-backend-service
+                port:
+                  number: 5000
+
+    - host: echogame.mlthrive.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: echogame-frontend-service
+                port:
+                  number: 80
+
+    - host: api-echogame.mlthrive.com
       http:
         paths:
           - path: /
