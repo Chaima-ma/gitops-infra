@@ -13,8 +13,21 @@ spec:
     - hosts:
         - heartaware.nightingaleheart.com
       secretName: heartaware-tls
+    - hosts:
+        - heartaware.mlthrive.com
+      secretName: heartaware-mlthrive-tls
   rules:
     - host: heartaware.nightingaleheart.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: heartaware-frontend-service
+                port:
+                  number: 80
+    - host: heartaware.mlthrive.com
       http:
         paths:
           - path: /
