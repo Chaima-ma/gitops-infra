@@ -7,11 +7,18 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
+
   tls:
     - hosts:
         - cardiomegaly-cnn.nightingaleheart.com
         - api-cardiomegaly.nightingaleheart.com
       secretName: cardiomegaly-tls
+
+    - hosts:
+        - cardiomegaly-cnn.mlthrive.com
+        - api-cardiomegaly.mlthrive.com
+      secretName: cardiomegaly-mlthrive-tls
+
   rules:
     - host: cardiomegaly-cnn.nightingaleheart.com
       http:
@@ -23,7 +30,30 @@ spec:
                 name: cardiomegaly-frontend-service
                 port:
                   number: 80
+
     - host: api-cardiomegaly.nightingaleheart.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cardiomegaly-backend-service
+                port:
+                  number: 8000
+
+    - host: cardiomegaly-cnn.mlthrive.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cardiomegaly-frontend-service
+                port:
+                  number: 80
+
+    - host: api-cardiomegaly.mlthrive.com
       http:
         paths:
           - path: /
