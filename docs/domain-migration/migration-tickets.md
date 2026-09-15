@@ -14,7 +14,10 @@ All tasks are strictly categorized by domain ownership and operational scope:
 
 * **AI-WhatIf Domain Migration (September 14, 2026):** Fully completed. Frontend bundle rebuilt with `*.mlthrive.com` API endpoints, NGINX Ingress and Let's Encrypt TLS secret `aiwhatif-mlthrive-tls` provisioned, legacy Cilium HTTPRoutes removed from GitOps. ArgoCD application is `Synced / Healthy`.
 * **Cilium Operator & IPAM Outage (Ticket #11 — September 14, 2026):** Resolved. Fixed Gateway API TLSRoute CRD compatibility (`v1alpha2 served=true`). Both `cilium-operator` pods recovered (`2/2 Ready`), worker node `medium-fbfpz-5brrp` received PodCIDR, Cilium DaemonSet `6/6 Ready`, blocked workloads (Segmentation3D backend, Loki) unblocked and running.
-
+Ticket #2: PollutionMap frontend still uses old API domain and old API ingress host (September 14, 2026) Completed.
+* Frontend was calling the wrong API domain. The API base URL was baked into the frontend code at build time, pointing to api.pollutionmap.nightingaleheart.com. I updated it to api.pollutionmap.mlthrive.com and triggered a rebuild/redeploy.
+* Backend was rejecting requests from the new domain (CORS). Even after fixing #1, one feature (city search) still failed — the backend has a security setting (CORS) that only allows requests from an approved list of domains, and that list still only had the old nightingaleheart.com domains on it. So the backend was correctly blocking the new domain as "not recognized." I added the new domain to that allowlist and redeployed.
+* Both Backend and Frontend shows READY 1/1 ArgoCD is Synced/Healthy.
 ---
 
 # 1. APPLICATION FIXES (Frontend Rebuilds / Hardcoded API URLs)
