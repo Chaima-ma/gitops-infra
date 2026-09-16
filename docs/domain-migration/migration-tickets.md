@@ -25,6 +25,13 @@ Ticket #2: PollutionMap frontend still uses old API domain and old API ingress h
 * Ticket #3: EchoGame frontend still uses old API domain after mlthrive.com migration(September 14, 2026)
 * I diagnosed and fixed a stale-build issue where the EchoGame frontend was still calling the old nightingaleheart.com domain despite the k8s manifest already showing the correct mlthrive.com values. I traced it past the manifest by exec'ing into the live pod and grepping the compiled Next.js bundle, which showed the dead domain baked directly into the JS a build-time issue, not a runtime config one. I tracked it back to the CI workflow (build-and-deploy.yml) in the healthview-echogame repo, where the old domain was hardcoded into the Docker build-args. I updated the build-args to the new domain, triggered a rebuild, force-restarted the deployment to pick up the new image (since the auto GitOps-update step had been removed from the workflow), and verified the fix confirmed the new pod is on a fresh image digest, /api/questions and /api/predict now correctly point to api-echogame.mlthrive.com, and zero references to the old domain remain anywhere in the bundle.
 * ArgoCD is showing Synced/Healthy.
+* Ticket #5: HarmoniaHealth frontend still uses old API domain after mlthrive.com migration(September 14, 2026)
+* Traced the issue from the k8s deployment → ArgoCD → running pod's served bundle (kubectl exec + grep) to confirm the domain was compiled into apiClient-*.js, not a runtime config.
+Found the exact line in the CI workflow generating the stale .env.production and fixed it to https://api-harmoniahealth.mlthrive.com.
+Pushed the fix, which triggered a rebuild, new image push, and GitOps update.
+Confirmed ArgoCD auto-deployed the new pod.
+Verified via kubectl exec + grep on the live pod: old domain gone from the API client, new domain present and in use.
+* ArgoCD is showing Synced/Healthy.
 ---
 
 # 1. APPLICATION FIXES (Frontend Rebuilds / Hardcoded API URLs)
