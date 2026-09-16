@@ -22,7 +22,7 @@ spec:
         - name: ghcr-secret
       containers:
         - name: aiwhatif-backend-r
-          image: ghcr.io/curatimexai/nightingale-aiwhatif-backend-r:69f816a24e5897d26c9dc9ebdad388ce010c261b
+          image: ghcr.io/curatimexai/nightingale-aiwhatif-backend-r:2014eaa2a191bc9ae513239fed1523c9bd9ddb4d
           envFrom:
             - secretRef:
                 name: aiwhatif-secret
