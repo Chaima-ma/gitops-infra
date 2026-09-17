@@ -32,6 +32,15 @@ Pushed the fix, which triggered a rebuild, new image push, and GitOps update.
 Confirmed ArgoCD auto-deployed the new pod.
 Verified via kubectl exec + grep on the live pod: old domain gone from the API client, new domain present and in use.
 * ArgoCD is showing Synced/Healthy.
+* Ticket #4: EchoExplore frontend verification and legacy API references (September 14, 2026).
+* Audited deployed EchoExplore frontend chunks for occurrences of nightingaleheart.com
+Scanned all 13 JS chunks. Found 6 occurrences, all intentional marketing/navigation content (footer links, EchoGame cross-link, contact email) — no API calls. Zero occurrences of api-echoexplore.
+Checked for hardcoded legacy API URLs. Updated build config, rebuilt, and redeployed image as needed
+No hardcoded legacy API URLs found, so no build config changes, rebuild, or redeploy were necessary.
+Verified that ultrasound video predictions and API calls route cleanly to api-echoexplore.mlthrive.com
+Confirmed echoexplore.mlthrive.com/ and /predict return 200; api-echoexplore.mlthrive.com/ returns 404 on root only (expected, no root route defined endpoint-level calls are unaffected). Also did a live DevTools Network-tab check while running a prediction to confirm no runtime-constructed URLs point to the legacy domain.
+* Checked ArgoCD and its showing Synced/Healthy.
+Status: Audit complete. No legacy API references found. No code changes required.
 ---
 
 # 1. APPLICATION FIXES (Frontend Rebuilds / Hardcoded API URLs)
