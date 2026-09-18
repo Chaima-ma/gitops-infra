@@ -8,4 +8,4 @@ metadata:
 data:
   config.js: |
     const API_BASE_URL = "https://segmentation-api.mlthrive.com";
-    const S3_MODELS_URL = "https://healthview-segmentation3d-models-prod.s3.eu-central-1.amazonaws.com/models";
+    const S3_MODELS_URL = "https://6ftru.upcloudobjects.com/main-website/models/segmentation3d";

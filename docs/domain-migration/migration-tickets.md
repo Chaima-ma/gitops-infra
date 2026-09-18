@@ -49,6 +49,12 @@ Ticket #1 Causal Modeling frontend still uses old nightingaleheart.com API URL a
 * Deployed the changes and confirmed that the build and deploy workflow completed successfully. 
 * Checked ArgoCD and confirmed that it is showing Synced/Healthy.
 Status: Completed and verified. Note though that the institutional access link was updated to mlthrive.com which can be changed when the appropriate URL is available.
+* Ticket #9: Segmentation3D models storage migration AWS -> approved storage (September 14, 2026)
+* Migrated all 23 model files (~244 MB) from AWS S3 to UpCloud Object Storage (main-website/models/segmentation3d/), verified integrity with zero discrepancies
+* Updated S3_MODELS_URL in frontend-configmap.yaml, deployed via ArgoCD
+* Diagnosed and fixed a CORS issue blocking model loading in the browser (set via S3 API, since UpCloud's panel has no CORS UI)
+* Verified all 5 models load and segment correctly in production
+* Decommissioned the AWS S3 bucket (healthview-segmentation3d-models-prod)
 
 ---
 
