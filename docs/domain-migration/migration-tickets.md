@@ -55,7 +55,13 @@ Status: Completed and verified. Note though that the institutional access link w
 * Diagnosed and fixed a CORS issue blocking model loading in the browser (set via S3 API, since UpCloud's panel has no CORS UI)
 * Verified all 5 models load and segment correctly in production
 * Decommissioned the AWS S3 bucket (healthview-segmentation3d-models-prod)
-
+* Ticket #10 EchoExplore media storage dependency audit and migration (September 14, 2026)
+* Confirmed that the deployed EchoExplore backend uses AWS S3 for video storage.
+* Backend logs show videos being downloaded from s3://echogame-videos-mp4-migrated/mp4/ when the application starts.
+* Videos are downloaded to /app/mp4/ and then processed by the backend.
+* Found no indication of a persistent volume being used for video storage.
+* Also checked the relevant configuration and found no indication that UpCloud Object Storage is currently being used for videos.
+Status: Audit completed and AWS S3 dependency confirmed. Migration to UpCloud Object Storage remains pending.
 ---
 
 # 1. APPLICATION FIXES (Frontend Rebuilds / Hardcoded API URLs)
