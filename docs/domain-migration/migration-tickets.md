@@ -41,6 +41,15 @@ Verified that ultrasound video predictions and API calls route cleanly to api-ec
 Confirmed echoexplore.mlthrive.com/ and /predict return 200; api-echoexplore.mlthrive.com/ returns 404 on root only (expected, no root route defined endpoint-level calls are unaffected). Also did a live DevTools Network-tab check while running a prediction to confirm no runtime-constructed URLs point to the legacy domain.
 * Checked ArgoCD and its showing Synced/Healthy.
 Status: Audit complete. No legacy API references found. No code changes required.
+Ticket #1 Causal Modeling frontend still uses old nightingaleheart.com API URL after domain migration (September 14, 2026)
+* Updated the frontend build configuration to replace the API URL https://api-causal-modeling.nightingaleheart.com with https://api-causal-modeling.mlthrive.com.
+* Updated the institutional access footer link from nightingaleheart.com to mlthrive.com.
+* Built and tested the updated frontend locally and confirmed that the old nightingaleheart.com reference was no longer present.
+* Verified through the devtools network tab that frontend analysis requests are sent to https://api-causal-modeling.mlthrive.com/analyze and returned HTTP 200.
+* Deployed the changes and confirmed that the build and deploy workflow completed successfully. 
+* Checked ArgoCD and confirmed that it is showing Synced/Healthy.
+Status: Completed and verified. Note though that the institutional access link was updated to mlthrive.com which can be changed when the appropriate URL is available.
+
 ---
 
 # 1. APPLICATION FIXES (Frontend Rebuilds / Hardcoded API URLs)
