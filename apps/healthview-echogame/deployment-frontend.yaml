@@ -35,7 +35,7 @@ spec:
             - name: NEXT_PUBLIC_API_URL
               value: https://api-echogame.mlthrive.com
             - name: NEXT_PUBLIC_S3_BASE_URL
-              value: https://cdn.echogame.nightingaleheart.com
+              value: https://cdn.echogame.mlthrive.com
           resources:
             requests:
               cpu: 250m
