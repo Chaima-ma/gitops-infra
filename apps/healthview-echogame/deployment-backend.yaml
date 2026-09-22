@@ -33,7 +33,7 @@ spec:
             - name: FLASK_ENV
               value: production
             - name: CDN_BASE_URL
-              value: https://cdn.echogame.nightingaleheart.com
+              value: https://cdn.echogame.mlthrive.com
           resources:
             requests:
               cpu: 250m
