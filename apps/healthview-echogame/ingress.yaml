@@ -63,6 +63,9 @@ metadata:
     nginx.ingress.kubernetes.io/upstream-vhost: "6ftru.upcloudobjects.com"
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/rewrite-target: /echogame-media/$1
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://echogame.mlthrive.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, HEAD, OPTIONS"
 spec:
   ingressClassName: nginx
   rules:
