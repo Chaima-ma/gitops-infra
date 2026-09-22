@@ -62,6 +62,18 @@ Status: Completed and verified. Note though that the institutional access link w
 * Found no indication of a persistent volume being used for video storage.
 * Also checked the relevant configuration and found no indication that UpCloud Object Storage is currently being used for videos.
 Status: Audit completed and AWS S3 dependency confirmed. Migration to UpCloud Object Storage remains pending.
+Ticket #8: Migrate EchoGame media storage and CDN from AWS to UpCloud (September 14, 2026)
+Dataset identification — Located the authoritative video dataset in S3 bucket echogame-videos-mp4 (eu-central-1), previously served via CloudFront distribution E138H0T5HME5VT under the alias cdn.echogame.nightingaleheart.com. The distribution's S3 origin was echogame-videos-mp4.s3.eu-central-1.amazonaws.com, fronted with an Origin Access Control (E28MHZ4ITEH9GF).
+Account correction — During discovery, confirmed via CloudShell that the distribution actually lived in AWS account 654654611936, not the initially assumed 300763413277. Provisioned a separate IAM user/profile scoped to the correct account before proceeding.
+Migration — Media files migrated to UpCloud Object Storage; dataset integrity confirmed against the source bucket prior to teardown.
+New CDN endpoint — Configured and validated cdn.echogame.mlthrive.com as the new public media endpoint.
+Config updates — NEXT_PUBLIC_S3_BASE_URL (frontend) and CDN_BASE_URL (backend) repointed to cdn.echogame.mlthrive.com.
+Validation — Confirmed video delivery through the new domain before touching legacy resources.
+Decommission (legacy AWS):
+Fetched distribution config via get-distribution-config, flipped Enabled: false, and pushed via update-distribution (hit and resolved a UTF-8 BOM parsing error and one PreconditionFailed ETag mismatch along the way — resolved by re-fetching a fresh ETag before retry).
+Polled get-distribution until Status: Deployed / Enabled: false, then ran delete-distribution — confirmed removed via NoSuchDistribution.
+Checked bucket versioning (not enabled), ran aws s3 rm --recursive to purge all objects (mp4/ and test-50/ prefixes — several hundred files), then delete-bucket — confirmed removed via NoSuchBucket on both s3 ls and head-bucket.
+Result: No remaining dependency on nightingaleheart.com or AWS CloudFront/S3 for EchoGame media. All legacy infrastructure fully decommissioned; media now served entirely from UpCloud via cdn.echogame.mlthrive.com.
 ---
 
 # 1. APPLICATION FIXES (Frontend Rebuilds / Hardcoded API URLs)
